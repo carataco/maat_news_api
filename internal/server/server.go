@@ -26,12 +26,10 @@ type Server struct {
 	mux *http.ServeMux
 }
 
-func New() *Server {
+func NewServer() *Server {
 	s := &Server{
 		mux: http.NewServeMux(),
 	}
-
-	s.registerRoutes()
 	return s
 }
 
@@ -39,7 +37,7 @@ func (s *Server) Handler() http.Handler {
 	return s.middleware(s.mux)
 }
 
-func (s *Server) registerRoutes() {
+func (s *Server) RegisterRoutes() {
 	// health check
 	s.mux.HandleFunc("/v1/health", func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
