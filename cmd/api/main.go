@@ -37,7 +37,8 @@ func init() {
 }
 
 func main() {
-	srv := server.New()
+	srv := server.NewServer()
+	srv.RegisterRoutes()
 
 	httpServer := &http.Server{
 		Addr:         ":8080",
