@@ -15,17 +15,24 @@ Why: This keeps all initialization logic centralized and separate from the busin
 */
 
 import (
+	"fmt"
 	"log"
 	"net/http"
+	"os"
 	"time"
 
+	"github.com/aws/aws-lambda-go/lambda"
 	"github.com/carataco/maat_news_api/internal/config"
 	"github.com/carataco/maat_news_api/internal/server"
+	"github.com/joho/godotenv"
 )
 
 var cfg config.Config
 
 func init() {
+	if err := godotenv.Load(); err != nil {
+		log.Println("No .env file found, relying on environment variables")
+	}
 
 	cfg = config.Config{
 		Logger:        1,
@@ -36,7 +43,9 @@ func init() {
 	}
 }
 
-func main() {
+func LambdaHandler() {
+	fmt.Println("Running Lambda Handler")
+
 	srv := server.NewServer()
 	srv.RegisterRoutes()
 
@@ -50,4 +59,14 @@ func main() {
 
 	log.Println("API listening on :8080")
 	log.Fatal(httpServer.ListenAndServe())
+}
+
+func main() {
+	if os.Getenv("LOCAL") == "true" {
+		fmt.Println("Running locally")
+		LambdaHandler()
+		return
+	}
+
+	lambda.Start(LambdaHandler)
 }
