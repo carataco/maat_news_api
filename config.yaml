@@ -1,3 +1,3 @@
 lambdas:
-  - api_endpoint_articles
-  - api_endpoint_authors
+  -api_endpoint_articles
+  -api_endpoint_authors
