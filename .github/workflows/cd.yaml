@@ -13,25 +13,26 @@ jobs:
       lambdas: ${{ steps.lambdas.outputs.lambdas }}
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      # 1️⃣ Detect relevant changes in cmd/ or internal/ or go.mod/sum
+      # 1️⃣ Detect Go code changes (main.go, internal, go.mod/sum)
       - id: check
         run: |
-            git fetch origin main
-            if git diff --name-only origin/main~1 origin/main | grep -Eq '^cmd/|^internal/|go\.mod|go\.sum'; then
+          git fetch origin main
+          # Use your working diff logic exactly
+          if git diff --name-only origin/main~1 origin/main | grep -Eq '^cmd/|^internal/|go\.mod|go\.sum'; then
             echo "deploy=true" >> $GITHUB_OUTPUT
-            else
+          else
             echo "deploy=false" >> $GITHUB_OUTPUT
-            fi
+          fi
 
-      # 2️⃣ Read Lambda names from config.yaml (simple Bash parsing)
+      # 2️⃣ Read Lambda names from config.yaml
       - id: lambdas
         if: steps.check.outputs.deploy == 'true'
         run: |
+          echo "Reading Lambda names from config..."
           LAMBDAS_LIST=()
           capture=false
           while IFS= read -r line || [ -n "$line" ]; do
@@ -40,15 +41,19 @@ jobs:
                   capture=true
                   continue
               fi
+              if [[ "$trimmed" =~ ^[a-zA-Z0-9_-]+: ]]; then
+                  capture=false
+              fi
               if $capture && [[ "$trimmed" == -* ]]; then
                   item=$(echo "$trimmed" | sed 's/^-//; s/^[[:space:]]*//')
                   LAMBDAS_LIST+=("$item")
               fi
           done < config.yaml
 
-          # Convert to JSON array for matrix
-          LAMBDAS_JSON=$(printf '%s\n' "${LAMBDAS_LIST[@]}" | jq -R . | jq -s .)
-          echo "lambdas=$LAMBDAS_JSON" >> $GITHUB_OUTPUT
+          LAMBDAS=$(printf '%s\n' "${LAMBDAS_LIST[@]}" | awk 'BEGIN{ORS=","} {print "\"" $0 "\""}' | sed 's/,$//')
+          LAMBDAS="[$LAMBDAS]"
+          echo "LAMBDAS=$LAMBDAS"
+          echo "lambdas=$LAMBDAS" >> $GITHUB_OUTPUT
 
   no-changes:
     needs: detect-changes
@@ -67,18 +72,24 @@ jobs:
         lambda: ${{ fromJson(needs.detect-changes.outputs.lambdas) }}
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Setup Go
-        uses: actions/setup-go@v5
+      - uses: actions/setup-go@v5
         with:
           go-version: '1.22'
 
       - name: Build Lambda binary
         run: |
           echo "Building Lambda binary for ${{ matrix.lambda }}"
-          FOLDER=$(echo "${{ matrix.lambda }}" | sed 's/^api_endpoint_//')  # infer folder from name
+          # Explicit mapping of Lambda name to folder
+          if [[ "${{ matrix.lambda }}" == "api_endpoint_articles" ]]; then
+              FOLDER="articles"
+          elif [[ "${{ matrix.lambda }}" == "api_endpoint_authors" ]]; then
+              FOLDER="authors"
+          else
+              echo "Unknown lambda ${{ matrix.lambda }}"
+              exit 1
+          fi
           mkdir -p build
           GOOS=linux GOARCH=amd64 CGO_ENABLED=0 \
           go build -o build/bootstrap ./cmd/$FOLDER/main.go
@@ -89,8 +100,7 @@ jobs:
           zip ../${{ matrix.lambda }}.zip bootstrap
           cd ..
 
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
+      - uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
