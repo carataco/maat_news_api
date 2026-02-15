@@ -1,0 +1,29 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+
+Resources:
+  ArticlesFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: cmd/articles/main.go
+      Runtime: go1.x
+      CodeUri: .
+      Events:
+        ArticlesAPI:
+          Type: Api
+          Properties:
+            Path: /v1/articles
+            Method: get
+
+  AuthorsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: cmd/authors/main.go
+      Runtime: go1.x
+      CodeUri: .
+      Events:
+        AuthorsAPI:
+          Type: Api
+          Properties:
+            Path: /v1/authors
+            Method: get

@@ -1,0 +1,5 @@
+lambdas:
+  - folder: articles
+    lambda_name: api_endpoint_articles
+  - folder: authors
+    lambda_name: api_endpoint_authors
