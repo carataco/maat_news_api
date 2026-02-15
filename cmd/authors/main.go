@@ -21,5 +21,6 @@ func main() {
 		fmt.Println("Running locally")
 		return
 	}
+
 	lambda.Start(authors.Handler)
 }
