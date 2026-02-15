@@ -1,9 +1,9 @@
-package service
+package authors
 
 import (
-	"net/http"
-
+	"github.com/aws/aws-lambda-go/events"
 	"github.com/carataco/maat_news_api/internal/data"
+	"github.com/carataco/maat_news_api/internal/request"
 )
 
 var defaultAuthorsColumns = []string{
@@ -17,9 +17,9 @@ var allowedAuthorsColumns = map[string]struct{}{
 	"email": {},
 }
 
-func GetAuthorsData(r *http.Request) ([]map[string]any, error) {
+func GetAuthorsData(r *events.APIGatewayV2HTTPRequest) ([]map[string]any, error) {
 
-	columns := parseColumns(r, defaultAuthorsColumns, allowedAuthorsColumns)
+	columns := request.ParseColumns(r.QueryStringParameters, defaultAuthorsColumns, allowedAuthorsColumns)
 
 	rows, err := data.SelectAuthors(columns)
 

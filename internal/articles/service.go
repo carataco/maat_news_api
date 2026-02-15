@@ -1,9 +1,9 @@
-package service
+package articles
 
 import (
-	"net/http"
-
+	"github.com/aws/aws-lambda-go/events"
 	"github.com/carataco/maat_news_api/internal/data"
+	"github.com/carataco/maat_news_api/internal/request"
 )
 
 var defaultArticlesColumns = []string{
@@ -18,9 +18,9 @@ var allowedArticlesColumns = map[string]struct{}{
 	"created_at": {},
 }
 
-func GetArticlesData(r *http.Request) ([]map[string]any, error) {
+func GetArticlesData(r *events.APIGatewayV2HTTPRequest) ([]map[string]any, error) {
 
-	columns := parseColumns(r, defaultArticlesColumns, allowedArticlesColumns)
+	columns := request.ParseColumns(r.QueryStringParameters, defaultArticlesColumns, allowedArticlesColumns)
 
 	rows, err := data.SelectArticles(columns)
 
